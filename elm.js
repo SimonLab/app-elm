@@ -6123,7 +6123,7 @@ var $elm$http$Http$get = function (r) {
 var $author$project$Main$getAuthUrls = $elm$http$Http$get(
 	{
 		expect: A2($elm$http$Http$expectJson, $author$project$Main$GotAuthUrls, $author$project$Main$authUrlsDecoder),
-		url: 'https://appapispike.herokuapp.com/api/auth/urls'
+		url: 'http://localhost:4000/api/auth/urls'
 	});
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(

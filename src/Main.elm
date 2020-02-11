@@ -1,10 +1,12 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
 import Json.Decode as JD
+import Url
 
 
 
@@ -13,11 +15,13 @@ import Json.Decode as JD
 
 main : Program () Model Msg
 main =
-    Browser.document
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
 
 
@@ -26,12 +30,19 @@ main =
 
 
 type alias Model =
-    { urls : List String }
+    { key : Nav.Key
+    , page : Page
+    }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Model [], getAuthUrls )
+type Page
+    = Home
+    | Login
+
+
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
+    ( Model key Home, Cmd.none )
 
 
 
@@ -39,26 +50,31 @@ init _ =
 
 
 type Msg
-    = GotAuthUrls (Result Http.Error (List String))
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
+    | GotAuthUrls (Result Http.Error (List String))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        LinkClicked link ->
+            case link of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( model, Cmd.none )
+
         GotAuthUrls result ->
             case result of
                 Ok urls ->
-                    let
-                        _ =
-                            Debug.log "urls" urls
-                    in
-                    ( { model | urls = urls }, Cmd.none )
+                    ( model, Cmd.none )
 
                 Err e ->
-                    let
-                        _ =
-                            Debug.log "error" e
-                    in
                     ( model, Cmd.none )
 
 
@@ -80,20 +96,14 @@ view model =
     { title = "App"
     , body =
         [ h1 [] [ text "App Login" ]
-        , ul [] <| List.map (\u -> showUrl u) model.urls
         ]
     }
-
-
-showUrl : String -> Html Msg
-showUrl url =
-    li [] [ a [ href url ] [ text url ] ]
 
 
 getAuthUrls : Cmd Msg
 getAuthUrls =
     Http.get
-        { url = "https://appapispike.herokuapp.com/api/auth/urls"
+        { url = "http://localhost:4000/api/auth/urls"
         , expect = Http.expectJson GotAuthUrls authUrlsDecoder
         }
 
